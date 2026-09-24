@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db } from "@/lib/db";
 
 type FeatureFlagRow = {
   id: string;
@@ -9,7 +9,7 @@ type FeatureFlagRow = {
   environmentKey: string;
   environmentName: string;
   value: boolean;
-}
+};
 
 type FeatureFlagWithValues = {
   id: string;
@@ -21,11 +21,12 @@ type FeatureFlagWithValues = {
     environmentKey: string;
     environmentName: string;
     value: boolean;
-  }[]
-}
+  }[];
+};
 
 export const getFeatureFlagsByProjectId = async (projectId: string) => {
-  const result = await db.query<FeatureFlagRow>(`
+  const result = await db.query<FeatureFlagRow>(
+    `
   SELECT
       ff.id,
       ff.key,
@@ -43,11 +44,13 @@ export const getFeatureFlagsByProjectId = async (projectId: string) => {
   AND e.project_id = ff.project_id
   WHERE ff.project_id = $1
   ORDER BY ff.name, e.display_order
-  `, [projectId]);
+  `,
+    [projectId],
+  );
 
-  const featureFlagsById = new Map<string, FeatureFlagWithValues>;
+  const featureFlagsById = new Map<string, FeatureFlagWithValues>();
 
-  for(const row of result.rows) {
+  for (const row of result.rows) {
     const environmentValue = {
       environmentId: row.environmentId,
       environmentKey: row.environmentKey,
@@ -57,7 +60,7 @@ export const getFeatureFlagsByProjectId = async (projectId: string) => {
 
     const existingFlag = featureFlagsById.get(row.id);
 
-    if(existingFlag) {
+    if (existingFlag) {
       existingFlag.values.push(environmentValue);
     } else {
       featureFlagsById.set(row.id, {
@@ -65,10 +68,10 @@ export const getFeatureFlagsByProjectId = async (projectId: string) => {
         key: row.key,
         name: row.name,
         description: row.description,
-        values: [environmentValue]
-      })
+        values: [environmentValue],
+      });
     }
   }
 
   return [...featureFlagsById.values()];
-}
+};
