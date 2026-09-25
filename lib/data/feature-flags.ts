@@ -45,7 +45,7 @@ export const getFeatureFlagsByProjectId = async (projectId: string) => {
   ON e.id = ffc.environment_id
   AND e.project_id = ff.project_id
   WHERE ff.project_id = $1
-  ORDER BY ff.name, e.display_order
+  ORDER BY ff.created_at DESC, e.display_order
   `,
     [projectId],
   );
