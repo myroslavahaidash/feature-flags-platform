@@ -2,6 +2,7 @@
 
 import { createFeatureFlag } from "@/lib/data/create-feature-flag";
 import { revalidatePath } from "next/cache";
+import { updateFeatureFlagValue } from "@/lib/data/feature-flags";
 
 export type CreateFeatureFlagState = {
   error: string | null;
@@ -73,4 +74,40 @@ export async function createFeatureFlagAction(
   revalidatePath(`/projects/${projectId}`);
 
   return { error: null, values: { name: "", key: "", description: "" } };
+}
+
+export type UpdateFeatureFlagValueResult = {
+  error: string | null;
+};
+
+export async function updateFeatureFlagValueAction(
+  value: boolean,
+  featureFlagId: string,
+  environmentId: string,
+  projectId: string,
+): Promise<UpdateFeatureFlagValueResult> {
+  if (
+    typeof value !== "boolean" ||
+    !/^\d+$/.test(featureFlagId) ||
+    !/^\d+$/.test(environmentId) ||
+    !/^\d+$/.test(projectId)
+  ) {
+    return { error: "Invalid update request" };
+  }
+
+  const updated = await updateFeatureFlagValue(
+    value,
+    featureFlagId,
+    environmentId,
+  );
+
+  if (!updated) {
+    return {
+      error: "Feature flag configuration not found",
+    };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+
+  return { error: null };
 }

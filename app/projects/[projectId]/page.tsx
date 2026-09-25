@@ -1,5 +1,7 @@
 import { getFeatureFlagsByProjectId } from "@/lib/data/feature-flags";
 import { AddFeatureFlag } from "@/app/projects/[projectId]/add-feature-flag";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -9,13 +11,25 @@ type ProjectPageProps = {
 
 export default async function Project({ params }: ProjectPageProps) {
   const { projectId } = await params;
+
+  if (!/^\d+$/.test(projectId)) {
+    notFound();
+  }
+
   const featureFlags = await getFeatureFlagsByProjectId(projectId);
 
-  const environments = featureFlags[0]?.values ?? [];
+  const environments = featureFlags[0]?.environmentValues ?? [];
 
   return (
-    <main className="mx-auto max-w-5xl p-6">
-      <h1 className="mb-6 text-2xl">Feature flags</h1>
+    <>
+      <Link
+        href={`/projects`}
+        className="text-sm text-zinc-600 hover:text-zinc-900 hover:underline"
+      >
+        ← Back to projects
+      </Link>
+
+      <h1 className="mb-6 mt-4 text-3xl">Feature flags</h1>
 
       <AddFeatureFlag projectId={projectId} />
 
@@ -39,11 +53,16 @@ export default async function Project({ params }: ProjectPageProps) {
             {featureFlags.map((flag) => (
               <tr key={flag.id}>
                 <th className="px-4 py-3" scope="row">
-                  <div>{flag.name}</div>
+                  <Link
+                    className="block"
+                    href={`/projects/${projectId}/flags/${flag.id}`}
+                  >
+                    {flag.name}
+                  </Link>
                   <code className="text-sm text-zinc-500">{flag.key}</code>
                 </th>
 
-                {flag.values.map((environment) => (
+                {flag.environmentValues.map((environment) => (
                   <td key={environment.environmentId} className="px-4 py-3">
                     {environment.value ? "Enabled" : "Disabled"}
                   </td>
@@ -53,6 +72,6 @@ export default async function Project({ params }: ProjectPageProps) {
           </tbody>
         </table>
       </div>
-    </main>
+    </>
   );
 }
