@@ -2,6 +2,7 @@ import { getFeatureFlagById } from "@/lib/data/feature-flags";
 import { notFound } from "next/navigation";
 import { FlagToggle } from "@/app/projects/[projectId]/flags/[flagId]/flag-toggle";
 import Link from "next/link";
+import { DeleteFeatureFlag } from "@/app/projects/[projectId]/flags/[flagId]/delete-feature-flag";
 
 type FeatureFlagPageProps = {
   params: Promise<{
@@ -50,7 +51,7 @@ export default async function FeatureFlagPage({
           </p>
         </div>
 
-        <div className="divide-y divide-zinc-200 border border-zinc-200 rounded-lg">
+        <div className="mb-6 divide-y divide-zinc-200 border border-zinc-200 rounded-lg">
           {featureFlag.environmentValues.map((environment) => (
             <div
               key={environment.environmentId}
@@ -69,6 +70,12 @@ export default async function FeatureFlagPage({
           ))}
         </div>
       </section>
+
+      <DeleteFeatureFlag
+        projectId={projectId}
+        featureFlagId={featureFlag.id}
+        featureFlagName={featureFlag.name}
+      />
     </div>
   );
 }

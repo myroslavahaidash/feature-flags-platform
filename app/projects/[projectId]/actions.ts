@@ -2,7 +2,11 @@
 
 import { createFeatureFlag } from "@/lib/data/create-feature-flag";
 import { revalidatePath } from "next/cache";
-import { updateFeatureFlagValue } from "@/lib/data/feature-flags";
+import {
+  deleteFeatureFlag,
+  updateFeatureFlagValue,
+} from "@/lib/data/feature-flags";
+import { redirect } from "next/navigation";
 
 export type CreateFeatureFlagState = {
   error: string | null;
@@ -76,7 +80,7 @@ export async function createFeatureFlagAction(
   return { error: null, values: { name: "", key: "", description: "" } };
 }
 
-export type UpdateFeatureFlagValueResult = {
+export type UpdateFeatureFlagValueState = {
   error: string | null;
 };
 
@@ -85,7 +89,7 @@ export async function updateFeatureFlagValueAction(
   featureFlagId: string,
   environmentId: string,
   projectId: string,
-): Promise<UpdateFeatureFlagValueResult> {
+): Promise<UpdateFeatureFlagValueState> {
   if (
     typeof value !== "boolean" ||
     !/^\d+$/.test(featureFlagId) ||
@@ -110,4 +114,28 @@ export async function updateFeatureFlagValueAction(
   revalidatePath(`/projects/${projectId}`);
 
   return { error: null };
+}
+
+type DeleteFeatureFlagState = {
+  error: string | null;
+};
+
+export async function deleteFeatureFlagAction(
+  featureFlagId: string,
+  projectId: string,
+): Promise<DeleteFeatureFlagState> {
+  if (!/^\d+$/.test(featureFlagId) || !/^\d+$/.test(projectId)) {
+    return { error: "Invalid delete request" };
+  }
+
+  const deleted = await deleteFeatureFlag(featureFlagId);
+
+  if (!deleted) {
+    return {
+      error: "Feature flag not found",
+    };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  redirect(`/projects/${projectId}`);
 }

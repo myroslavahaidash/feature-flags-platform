@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 
 type ButtonProps = ComponentProps<"button"> & {
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "danger";
 };
 
 const baseClassName =
@@ -12,6 +12,7 @@ const baseClassName =
 const variantClassNames = {
   primary: "border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-700",
   secondary: "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
+  danger: "border-red-600 bg-red-500 text-white hover:bg-red-700",
 };
 
 export function Button({

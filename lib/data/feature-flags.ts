@@ -145,3 +145,15 @@ export async function updateFeatureFlagValue(
 
   return result.rowCount === 1;
 }
+
+export async function deleteFeatureFlag(id: string) {
+  const result = await db.query(
+    `
+    DELETE FROM feature_flags
+    WHERE id = $1
+    `,
+    [id],
+  );
+
+  return result.rowCount === 1;
+}
