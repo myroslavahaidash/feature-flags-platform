@@ -157,3 +157,24 @@ export async function deleteFeatureFlag(id: string) {
 
   return result.rowCount === 1;
 }
+
+export async function updateFeatureFlagDetails(
+  projectId: string,
+  featureFlagId: string,
+  name: string,
+  description: string | null,
+) {
+  const result = await db.query(
+    `
+    UPDATE feature_flags
+    SET
+      name = $1,
+      description = $2
+    WHERE id = $3
+      AND project_id = $4
+    `,
+    [name, description, featureFlagId, projectId],
+  );
+
+  return result.rowCount === 1;
+}

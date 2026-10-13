@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import {
   deleteFeatureFlag,
   updateFeatureFlagValue,
+  updateFeatureFlagDetails,
 } from "@/lib/data/feature-flags";
 import { redirect } from "next/navigation";
 
@@ -138,4 +139,49 @@ export async function deleteFeatureFlagAction(
 
   revalidatePath(`/projects/${projectId}`);
   redirect(`/projects/${projectId}`);
+}
+
+export type UpdateFeatureFlagDetailsState = {
+  error: string | null;
+};
+
+export async function updateFeatureFlagDetailsAction(
+  projectId: string,
+  featureFlagId: string,
+  _previousState: UpdateFeatureFlagDetailsState,
+  formData: FormData,
+): Promise<UpdateFeatureFlagDetailsState> {
+  const nameValue = formData.get("name");
+  const descriptionValue = formData.get("description");
+
+  if (!/^\d+$/.test(projectId) || !/^\d+$/.test(featureFlagId)) {
+    return { error: "Invalid feature flag" };
+  }
+
+  if (typeof nameValue !== "string" || nameValue.trim() === "") {
+    return { error: "Name is required" };
+  }
+
+  if (typeof descriptionValue !== "string") {
+    return { error: "Invalid description" };
+  }
+
+  const name = nameValue.trim();
+  const description = descriptionValue.trim() || null;
+
+  const updated = await updateFeatureFlagDetails(
+    projectId,
+    featureFlagId,
+    name,
+    description,
+  );
+
+  if (!updated) {
+    return { error: "Feature flag not found" };
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${projectId}/flags/${featureFlagId}`);
+
+  return { error: null };
 }

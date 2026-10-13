@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FlagToggle } from "@/app/projects/[projectId]/flags/[flagId]/flag-toggle";
 import Link from "next/link";
 import { DeleteFeatureFlag } from "@/app/projects/[projectId]/flags/[flagId]/delete-feature-flag";
+import { FeatureFlagDetails } from "@/app/projects/[projectId]/flags/[flagId]/feature-flag-details";
 
 type FeatureFlagPageProps = {
   params: Promise<{
@@ -36,11 +37,7 @@ export default async function FeatureFlagPage({
           ← Back to feature flags
         </Link>
 
-        <h1 className="text-3xl mt-4">{featureFlag.name}</h1>
-        <code>{featureFlag.key}</code>
-        {featureFlag.description && (
-          <p className="mt-4 text-zinc-600">{featureFlag.description}</p>
-        )}
+        <FeatureFlagDetails featureFlag={featureFlag} projectId={projectId} />
       </header>
 
       <section>
