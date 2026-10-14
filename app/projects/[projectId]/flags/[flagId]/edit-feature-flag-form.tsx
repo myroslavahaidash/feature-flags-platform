@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useActionState } from "react";
+import type { FeatureFlagWithValues } from "@/lib/data/feature-flags";
 import {
   updateFeatureFlagDetailsAction,
   type UpdateFeatureFlagDetailsState,
-} from "@/app/projects/[projectId]/actions";
-import type { FeatureFlagWithValues } from "@/lib/data/feature-flags";
+} from "@/app/projects/[projectId]/flags/[flagId]/actions";
 
 type EditFeatureFlagFormProps = {
   featureFlag: FeatureFlagWithValues;

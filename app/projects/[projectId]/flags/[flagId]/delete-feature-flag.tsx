@@ -1,8 +1,8 @@
 "use client";
 
 import { startTransition, useActionState } from "react";
-import { deleteFeatureFlagAction } from "@/app/projects/[projectId]/actions";
 import { Button } from "@/components/ui/button";
+import { deleteFeatureFlagAction } from "@/app/projects/[projectId]/flags/[flagId]/actions";
 
 type DeleteFeatureFlagProps = {
   projectId: string;

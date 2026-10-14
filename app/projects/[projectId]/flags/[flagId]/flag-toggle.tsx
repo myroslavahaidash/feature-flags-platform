@@ -1,7 +1,7 @@
 "use client";
 
-import { updateFeatureFlagValueAction } from "@/app/projects/[projectId]/actions";
 import { type ChangeEvent, startTransition, useActionState } from "react";
+import { updateFeatureFlagValueAction } from "@/app/projects/[projectId]/flags/[flagId]/actions";
 
 type FlagToggleProps = {
   checked: boolean;
