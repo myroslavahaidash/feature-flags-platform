@@ -8,9 +8,23 @@ import {
   updateFeatureFlagDetails,
 } from "@/lib/data/feature-flags";
 import { redirect } from "next/navigation";
+import {
+  createFeatureFlagSchema,
+  databaseIdSchema,
+  featureFlagDetailsSchema,
+  featureFlagIdentitySchema,
+  updateFeatureFlagValueSchema,
+} from "@/lib/validation/feature-flags";
+import { z } from "zod";
 
 export type CreateFeatureFlagState = {
-  error: string | null;
+  success: boolean;
+  formError: string | null;
+  fieldErrors: {
+    name?: string[];
+    key?: string[];
+    description?: string[];
+  };
   values: {
     name: string;
     key: string;
@@ -23,43 +37,56 @@ export async function createFeatureFlagAction(
   _previousState: CreateFeatureFlagState,
   formData: FormData,
 ): Promise<CreateFeatureFlagState> {
-  const nameValue = formData.get("name");
-  const keyValue = formData.get("key");
-  const descriptionValue = formData.get("description");
-
   const values = {
-    name: typeof nameValue === "string" ? nameValue : "",
-    key: typeof keyValue === "string" ? keyValue : "",
-    description: typeof descriptionValue === "string" ? descriptionValue : "",
+    name: formData.get("name"),
+    key: formData.get("key"),
+    description: formData.get("description"),
   };
 
-  if (!/^\d+$/.test(projectId)) {
-    return { error: "Invalid project ID", values };
+  const submittedValues = {
+    name: typeof values.name === "string" ? values.name : "",
+    key: typeof values.key === "string" ? values.key : "",
+    description:
+      typeof values.description === "string" ? values.description : "",
+  };
+
+  const projectResult = databaseIdSchema.safeParse(projectId);
+
+  if (!projectResult.success) {
+    return {
+      success: false,
+      formError: "Invalid project ID",
+      fieldErrors: {},
+      values: submittedValues,
+    };
   }
 
-  if (typeof nameValue !== "string" || nameValue.trim() === "") {
-    return { error: "Name is required", values };
+  const formResult = createFeatureFlagSchema.safeParse(values);
+
+  if (!formResult.success) {
+    const errors = z.flattenError(formResult.error);
+
+    return {
+      success: false,
+      formError: null,
+      fieldErrors: {
+        name: errors.fieldErrors.name,
+        key: errors.fieldErrors.key,
+        description: errors.fieldErrors.description,
+      },
+      values: submittedValues,
+    };
   }
 
-  if (typeof keyValue !== "string" || keyValue.trim() === "") {
-    return { error: "Key is required", values };
-  }
-
-  const name = nameValue.trim();
-  const key = keyValue.trim();
-  const description =
-    typeof descriptionValue === "string"
-      ? descriptionValue.trim() || undefined
-      : undefined;
-
-  const kebabCasePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-  if (!kebabCasePattern.test(key)) {
-    return { error: "Key must use kebab-case", values };
-  }
+  const { name, key, description } = formResult.data;
 
   try {
-    await createFeatureFlag(projectId, name, key, description);
+    await createFeatureFlag(
+      projectResult.data,
+      name,
+      key,
+      description || undefined,
+    );
   } catch (error) {
     if (
       typeof error === "object" &&
@@ -68,8 +95,12 @@ export async function createFeatureFlagAction(
       error.code === "23505"
     ) {
       return {
-        error: `A feature flag with the key "${key}" already exists`,
-        values,
+        success: false,
+        formError: null,
+        fieldErrors: {
+          key: [`A feature flag with the key "${key}" already exists`],
+        },
+        values: submittedValues,
       };
     }
 
@@ -78,7 +109,16 @@ export async function createFeatureFlagAction(
 
   revalidatePath(`/projects/${projectId}`);
 
-  return { error: null, values: { name: "", key: "", description: "" } };
+  return {
+    success: true,
+    formError: null,
+    fieldErrors: {},
+    values: {
+      name: "",
+      key: "",
+      description: "",
+    },
+  };
 }
 
 export type UpdateFeatureFlagValueState = {
@@ -91,19 +131,29 @@ export async function updateFeatureFlagValueAction(
   environmentId: string,
   projectId: string,
 ): Promise<UpdateFeatureFlagValueState> {
-  if (
-    typeof value !== "boolean" ||
-    !/^\d+$/.test(featureFlagId) ||
-    !/^\d+$/.test(environmentId) ||
-    !/^\d+$/.test(projectId)
-  ) {
-    return { error: "Invalid update request" };
-  }
-
-  const updated = await updateFeatureFlagValue(
+  const result = updateFeatureFlagValueSchema.safeParse({
     value,
     featureFlagId,
     environmentId,
+    projectId,
+  });
+
+  if (!result.success) {
+    return { error: "Invalid update request" };
+  }
+
+  const {
+    value: validValue,
+    featureFlagId: validFeatureFlagId,
+    environmentId: validEnvironmentId,
+    projectId: validProjectId,
+  } = result.data;
+
+  const updated = await updateFeatureFlagValue(
+    validValue,
+    validFeatureFlagId,
+    validEnvironmentId,
+    validProjectId,
   );
 
   if (!updated) {
@@ -112,7 +162,7 @@ export async function updateFeatureFlagValueAction(
     };
   }
 
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath(`/projects/${validProjectId}`);
 
   return { error: null };
 }
@@ -125,11 +175,16 @@ export async function deleteFeatureFlagAction(
   featureFlagId: string,
   projectId: string,
 ): Promise<DeleteFeatureFlagState> {
-  if (!/^\d+$/.test(featureFlagId) || !/^\d+$/.test(projectId)) {
+  const result = featureFlagIdentitySchema.safeParse({
+    projectId,
+    featureFlagId,
+  });
+
+  if (!result.success) {
     return { error: "Invalid delete request" };
   }
 
-  const deleted = await deleteFeatureFlag(featureFlagId);
+  const deleted = await deleteFeatureFlag(featureFlagId, projectId);
 
   if (!deleted) {
     return {
@@ -142,7 +197,12 @@ export async function deleteFeatureFlagAction(
 }
 
 export type UpdateFeatureFlagDetailsState = {
-  error: string | null;
+  success: boolean;
+  formError: string | null;
+  fieldErrors: {
+    name?: string[];
+    description?: string[];
+  };
 };
 
 export async function updateFeatureFlagDetailsAction(
@@ -151,37 +211,61 @@ export async function updateFeatureFlagDetailsAction(
   _previousState: UpdateFeatureFlagDetailsState,
   formData: FormData,
 ): Promise<UpdateFeatureFlagDetailsState> {
-  const nameValue = formData.get("name");
-  const descriptionValue = formData.get("description");
-
-  if (!/^\d+$/.test(projectId) || !/^\d+$/.test(featureFlagId)) {
-    return { error: "Invalid feature flag" };
-  }
-
-  if (typeof nameValue !== "string" || nameValue.trim() === "") {
-    return { error: "Name is required" };
-  }
-
-  if (typeof descriptionValue !== "string") {
-    return { error: "Invalid description" };
-  }
-
-  const name = nameValue.trim();
-  const description = descriptionValue.trim() || null;
-
-  const updated = await updateFeatureFlagDetails(
+  const identityResult = featureFlagIdentitySchema.safeParse({
     projectId,
     featureFlagId,
+  });
+
+  if (!identityResult.success) {
+    return {
+      success: false,
+      formError: "Invalid feature flag",
+      fieldErrors: {},
+    };
+  }
+  const detailsResult = featureFlagDetailsSchema.safeParse({
+    name: formData.get("name"),
+    description: formData.get("description"),
+  });
+
+  if (!detailsResult.success) {
+    const errors = z.flattenError(detailsResult.error);
+
+    return {
+      success: false,
+      formError: null,
+      fieldErrors: {
+        name: errors.fieldErrors.name,
+        description: errors.fieldErrors.description,
+      },
+    };
+  }
+
+  const { projectId: validProjectId, featureFlagId: validFeatureFlagId } =
+    identityResult.data;
+  const { name, description } = detailsResult.data;
+
+  const updated = await updateFeatureFlagDetails(
+    validProjectId,
+    validFeatureFlagId,
     name,
-    description,
+    description || null,
   );
 
   if (!updated) {
-    return { error: "Feature flag not found" };
+    return {
+      success: false,
+      formError: "Feature flag not found",
+      fieldErrors: {},
+    };
   }
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath(`/projects/${projectId}/flags/${featureFlagId}`);
 
-  return { error: null };
+  return {
+    success: true,
+    formError: null,
+    fieldErrors: {},
+  };
 }

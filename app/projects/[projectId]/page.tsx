@@ -2,6 +2,7 @@ import { getFeatureFlagsByProjectId } from "@/lib/data/feature-flags";
 import { AddFeatureFlag } from "@/app/projects/[projectId]/add-feature-flag";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { databaseIdSchema } from "@/lib/validation/feature-flags";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -12,11 +13,15 @@ type ProjectPageProps = {
 export default async function Project({ params }: ProjectPageProps) {
   const { projectId } = await params;
 
-  if (!/^\d+$/.test(projectId)) {
+  const result = databaseIdSchema.safeParse(projectId);
+
+  if (!result.success) {
     notFound();
   }
 
-  const featureFlags = await getFeatureFlagsByProjectId(projectId);
+  const validProjectId = result.data;
+
+  const featureFlags = await getFeatureFlagsByProjectId(validProjectId);
 
   const environments = featureFlags[0]?.environmentValues ?? [];
 
@@ -31,7 +36,7 @@ export default async function Project({ params }: ProjectPageProps) {
 
       <h1 className="mb-6 mt-4 text-3xl">Feature flags</h1>
 
-      <AddFeatureFlag projectId={projectId} />
+      <AddFeatureFlag projectId={validProjectId} />
 
       <div className="overflow-x-auto rounded-lg border border-zinc-200">
         <table className="w-full text-left">
@@ -55,7 +60,7 @@ export default async function Project({ params }: ProjectPageProps) {
                 <th className="px-4 py-3" scope="row">
                   <Link
                     className="block"
-                    href={`/projects/${projectId}/flags/${flag.id}`}
+                    href={`/projects/${validProjectId}/flags/${flag.id}`}
                   >
                     {flag.name}
                   </Link>

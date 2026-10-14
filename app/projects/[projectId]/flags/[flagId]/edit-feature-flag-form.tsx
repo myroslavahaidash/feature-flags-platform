@@ -28,7 +28,9 @@ export function EditFeatureFlagForm({
   );
 
   const initialState: UpdateFeatureFlagDetailsState = {
-    error: null,
+    success: false,
+    formError: null,
+    fieldErrors: {},
   };
 
   const [state, formAction, isPending] = useActionState(
@@ -38,7 +40,7 @@ export function EditFeatureFlagForm({
     ) => {
       const nextState = await updateDetails(previousState, formData);
 
-      if (nextState.error === null) {
+      if (nextState.success) {
         onClose();
       }
 
@@ -46,6 +48,9 @@ export function EditFeatureFlagForm({
     },
     initialState,
   );
+
+  const nameError = state.fieldErrors.name?.[0];
+  const descriptionError = state.fieldErrors.description?.[0];
 
   return (
     <form
@@ -62,7 +67,14 @@ export function EditFeatureFlagForm({
           name="name"
           defaultValue={featureFlag.name}
           required
+          aria-invalid={Boolean(nameError)}
+          aria-describedby={nameError ? "name-error" : undefined}
         />
+        {nameError && (
+          <p id="name-error" role="alert" className="mt-1 text-sm text-red-700">
+            {nameError}
+          </p>
+        )}
       </div>
 
       <div>
@@ -81,12 +93,23 @@ export function EditFeatureFlagForm({
           id="description"
           name="description"
           defaultValue={featureFlag.description ?? ""}
+          aria-invalid={Boolean(descriptionError)}
+          aria-describedby={descriptionError ? "description-error" : undefined}
         />
+        {descriptionError && (
+          <p
+            id="description-error"
+            role="alert"
+            className="mt-1 text-sm text-red-700"
+          >
+            {descriptionError}
+          </p>
+        )}
       </div>
 
-      {state.error && (
+      {state.formError && (
         <p role="alert" className="text-sm text-red-700">
-          {state.error}
+          {state.formError}
         </p>
       )}
 

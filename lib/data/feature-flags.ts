@@ -132,27 +132,37 @@ export async function updateFeatureFlagValue(
   value: boolean,
   featureFlagId: string,
   environmentId: string,
+  projectId: string,
 ) {
   const result = await db.query(
     `
-    UPDATE feature_flag_configurations
+    UPDATE feature_flag_configurations AS ffc
     SET value = $1
-    WHERE feature_flag_id = $2
-    AND environment_id = $3
+    FROM feature_flags AS ff, environments AS e
+    WHERE ffc.feature_flag_id = $2
+      AND ffc.environment_id = $3
+      AND ff.id = ffc.feature_flag_id
+      AND e.id = ffc.environment_id
+      AND ff.project_id = $4
+      AND e.project_id = $4
     `,
-    [value, featureFlagId, environmentId],
+    [value, featureFlagId, environmentId, projectId],
   );
 
   return result.rowCount === 1;
 }
 
-export async function deleteFeatureFlag(id: string) {
+export async function deleteFeatureFlag(
+  featureFlagId: string,
+  projectId: string,
+) {
   const result = await db.query(
     `
     DELETE FROM feature_flags
     WHERE id = $1
+      AND project_id = $2
     `,
-    [id],
+    [featureFlagId, projectId],
   );
 
   return result.rowCount === 1;

@@ -4,6 +4,7 @@ import { FlagToggle } from "@/app/projects/[projectId]/flags/[flagId]/flag-toggl
 import Link from "next/link";
 import { DeleteFeatureFlag } from "@/app/projects/[projectId]/flags/[flagId]/delete-feature-flag";
 import { FeatureFlagDetails } from "@/app/projects/[projectId]/flags/[flagId]/feature-flag-details";
+import { featureFlagIdentitySchema } from "@/lib/validation/feature-flags";
 
 type FeatureFlagPageProps = {
   params: Promise<{
@@ -17,11 +18,22 @@ export default async function FeatureFlagPage({
 }: FeatureFlagPageProps) {
   const { projectId, flagId } = await params;
 
-  if (!/^\d+$/.test(projectId) || !/^\d+$/.test(flagId)) {
+  const result = featureFlagIdentitySchema.safeParse({
+    projectId,
+    featureFlagId: flagId,
+  });
+
+  if (!result.success) {
     notFound();
   }
 
-  const featureFlag = await getFeatureFlagById(projectId, flagId);
+  const { projectId: validProjectId, featureFlagId: validFeatureFlagId } =
+    result.data;
+
+  const featureFlag = await getFeatureFlagById(
+    validProjectId,
+    validFeatureFlagId,
+  );
 
   if (!featureFlag) {
     notFound();
@@ -31,13 +43,16 @@ export default async function FeatureFlagPage({
     <div className="max-w-2xl">
       <header className="mb-6">
         <Link
-          href={`/projects/${projectId}`}
+          href={`/projects/${validProjectId}`}
           className="text-sm text-zinc-600 hover:text-zinc-900 hover:underline"
         >
           ← Back to feature flags
         </Link>
 
-        <FeatureFlagDetails featureFlag={featureFlag} projectId={projectId} />
+        <FeatureFlagDetails
+          featureFlag={featureFlag}
+          projectId={validProjectId}
+        />
       </header>
 
       <section>
@@ -61,7 +76,7 @@ export default async function FeatureFlagPage({
                 featureFlagId={featureFlag.id}
                 environmentId={environment.environmentId}
                 environmentName={environment.environmentName}
-                projectId={projectId}
+                projectId={validProjectId}
               />
             </div>
           ))}
@@ -69,7 +84,7 @@ export default async function FeatureFlagPage({
       </section>
 
       <DeleteFeatureFlag
-        projectId={projectId}
+        projectId={validProjectId}
         featureFlagId={featureFlag.id}
         featureFlagName={featureFlag.name}
       />

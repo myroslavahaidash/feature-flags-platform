@@ -15,7 +15,9 @@ export function AddFeatureFlagForm({
   onClose,
 }: AddFeatureFlagFormProps) {
   const initialState: CreateFeatureFlagState = {
-    error: null,
+    success: false,
+    formError: null,
+    fieldErrors: {},
     values: {
       name: "",
       key: "",
@@ -35,7 +37,7 @@ export function AddFeatureFlagForm({
         formData,
       );
 
-      if (nextState.error === null) {
+      if (nextState.success) {
         startTransition(() => {
           onClose();
         });
@@ -45,6 +47,10 @@ export function AddFeatureFlagForm({
     },
     initialState,
   );
+
+  const nameError = state.fieldErrors.name?.[0];
+  const keyError = state.fieldErrors.key?.[0];
+  const descriptionError = state.fieldErrors.description?.[0];
 
   const inputClassName =
     "w-full rounded-md border border-zinc-300 px-2 py-1 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200";
@@ -66,7 +72,14 @@ export function AddFeatureFlagForm({
           type="text"
           className={inputClassName}
           defaultValue={state.values.name}
+          aria-invalid={Boolean(nameError)}
+          aria-describedby={nameError ? "name-error" : undefined}
         />
+        {nameError && (
+          <p id="name-error" role="alert" className="mt-1 text-sm text-red-700">
+            {nameError}
+          </p>
+        )}
       </div>
 
       <div>
@@ -80,7 +93,14 @@ export function AddFeatureFlagForm({
           type="text"
           className={inputClassName}
           defaultValue={state.values.key}
+          aria-invalid={Boolean(keyError)}
+          aria-describedby={keyError ? "key-error" : undefined}
         />
+        {keyError && (
+          <p id="key-error" role="alert" className="mt-1 text-sm text-red-700">
+            {keyError}
+          </p>
+        )}
       </div>
 
       <div>
@@ -93,17 +113,28 @@ export function AddFeatureFlagForm({
           type="text"
           className={inputClassName}
           defaultValue={state.values.description}
+          aria-invalid={Boolean(descriptionError)}
+          aria-describedby={descriptionError ? "description-error" : undefined}
         />
+        {descriptionError && (
+          <p
+            id="description-error"
+            role="alert"
+            className="mt-1 text-sm text-red-700"
+          >
+            {descriptionError}
+          </p>
+        )}
       </div>
 
-      {state.error && (
+      {state.formError && (
         <p role="alert" className="text-sm text-red-700">
-          {state.error}
+          {state.formError}
         </p>
       )}
 
       <div className="mt-5 flex justify-end gap-3">
-        <Button type="button" onClick={onClose}>
+        <Button type="button" disabled={isPending} onClick={onClose}>
           Cancel
         </Button>
         <Button variant="primary" type="submit" disabled={isPending}>
