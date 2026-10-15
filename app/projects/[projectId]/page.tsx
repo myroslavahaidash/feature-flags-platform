@@ -3,6 +3,7 @@ import { AddFeatureFlag } from "@/app/projects/[projectId]/add-feature-flag";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { databaseIdSchema } from "@/lib/validation/feature-flags";
+import { getEnvironmentsByProjectId } from "@/lib/data/environments";
 
 type ProjectPageProps = {
   params: Promise<{
@@ -21,9 +22,12 @@ export default async function Project({ params }: ProjectPageProps) {
 
   const validProjectId = result.data;
 
-  const featureFlags = await getFeatureFlagsByProjectId(validProjectId);
+  const [featureFlags, environments] = await Promise.all([
+    getFeatureFlagsByProjectId(validProjectId),
+    getEnvironmentsByProjectId(validProjectId),
+  ]);
 
-  const environments = featureFlags[0]?.environmentValues ?? [];
+  const hasFeatureFlags = featureFlags.length > 0;
 
   return (
     <>
@@ -38,45 +42,64 @@ export default async function Project({ params }: ProjectPageProps) {
 
       <AddFeatureFlag projectId={validProjectId} />
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-200">
-        <table className="w-full text-left">
-          <thead className="bg-zinc-50">
-            <tr>
-              <th className="px-4 py-3" scope="col">
-                Flag
-              </th>
-
-              {environments.map((env) => (
-                <th key={env.environmentId} className="px-4 py-3" scope="col">
-                  {env.environmentName}
-                </th>
-              ))}
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-zinc-200">
-            {featureFlags.map((flag) => (
-              <tr key={flag.id}>
-                <th className="px-4 py-3" scope="row">
-                  <Link
-                    className="block"
-                    href={`/projects/${validProjectId}/flags/${flag.id}`}
-                  >
-                    {flag.name}
-                  </Link>
-                  <code className="text-sm text-zinc-500">{flag.key}</code>
+      {hasFeatureFlags ? (
+        <div className="overflow-x-auto rounded-lg border border-zinc-200">
+          <table className="w-full text-left">
+            <thead className="bg-zinc-50">
+              <tr>
+                <th className="px-4 py-3" scope="col">
+                  Flag
                 </th>
 
-                {flag.environmentValues.map((environment) => (
-                  <td key={environment.environmentId} className="px-4 py-3">
-                    {environment.value ? "Enabled" : "Disabled"}
-                  </td>
+                {environments.map((environment) => (
+                  <th key={environment.id} className="px-4 py-3" scope="col">
+                    {environment.name}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+
+            <tbody className="divide-y divide-zinc-200">
+              {featureFlags.map((flag) => (
+                <tr key={flag.id}>
+                  <th className="px-4 py-3" scope="row">
+                    <Link
+                      className="block"
+                      href={`/projects/${validProjectId}/flags/${flag.id}`}
+                    >
+                      {flag.name}
+                    </Link>
+                    <code className="text-sm text-zinc-500">{flag.key}</code>
+                  </th>
+
+                  {environments.map((environment) => {
+                    const environmentValue = flag.environmentValues.find(
+                      (value) => value.environmentId === environment.id,
+                    );
+
+                    return (
+                      <td key={environment.id} className="px-4 py-3">
+                        {environmentValue
+                          ? environmentValue.value
+                            ? "Enabled"
+                            : "Disabled"
+                          : "Not configured"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <section className="rounded-lg border border-dashed border-zinc-300 px-6 py-12 text-center">
+          <h2 className="font-semibold text-zinc-900">No feature flags yet</h2>
+          <p className="mt-2 text-sm text-zinc-600">
+            Create your first feature flag to configure it across environments.
+          </p>
+        </section>
+      )}
     </>
   );
 }
